@@ -1,0 +1,14 @@
+[[source]]
+url = "https://pypi.org/html-checker"
+verify_ssl = true
+name = "html-checker"
+
+[requires]
+python_version = "3.5"
+
+[packages]
+requests = "*"
+"bs4" = "*"
+
+[dev-packages]
+ipython = "*"
