@@ -6,7 +6,7 @@ Simple script to check directory full of html files for broken links
 import os
 import sys
 import itertools
-from urllib.parse import urlparse, urldefrag, urljoin
+from urllib.parse import urlsplit, urldefrag, urljoin
 import requests
 from bs4 import BeautifulSoup
 
@@ -20,7 +20,7 @@ def html_files_for_dir(pth):
                 yield fpath
 
 def rebase_link(lnk, baseurl, referrer_path):
-    parsed = urlparse(lnk)
+    parsed = urlsplit(lnk)
     if parsed.scheme:
         return urljoin(baseurl, lnk)
 
@@ -38,21 +38,46 @@ def links_in_soup(soup, referrer):
     return {rebase_link(lnk, baseurl, referrer) for lnk in ret}
 
 
+def anchor_in_soup(soup, anchor_name):
+    return bool(soup.find("", {"id" : anchor_name})) or bool(soup.find("", {"name" : anchor_name}))
+
 class LinkChecker:
     def __init__(self):
         self.soup_mapping = {}
         self.seen_links = {}
+        self.link_cnt = 0
+        self.fail_cnt = 0
 
     def test_link(self, link):
+        base_link, fragment = urldefrag(link)
         if link in self.seen_links:
             return self.seen_links[link]
-        #TODO
-        res = False
-        self.seen_links[link] = res
-        return res
+
+        if base_link in self.seen_links and not self.seen_links[base_link]:
+            return False
+
+        scheme = urlsplit(link)[0]
+        ret = False
+
+        if scheme:
+            if fragment:
+                # test with HTTP GET and read to soup
+                ret = self._test_http_fragment(base_link, fragment)
+            else:
+                ret = self._test_http_head(link)
+        else:
+            if fragment:
+                # read file to soup
+                ret = self._test_file_fragment(base_link, fragment)
+            else:
+                # just stat file
+                ret = os.path.exists(link)
+
+        self.seen_links[link] = ret
+        return ret
 
     def test_file(self, fname):
-        print("Testing: {}\n=================".format(fname))
+        print("\nTesting: {}\n=================".format(fname))
 
         if fname in self.soup_mapping:
             soup = self.soup_mapping[fname]
@@ -62,20 +87,60 @@ class LinkChecker:
                 self.soup_mapping[fname] = soup
 
         for lnk in links_in_soup(soup, fname):
+            self.link_cnt += 1
             if not self.test_link(lnk):
+                self.fail_cnt += 1
                 print("'{}' Broken!".format(lnk))
 
     def test_dir(self, pth):
         for fname in html_files_for_dir(pth):
             self.test_file(fname)
 
+    def _test_http_head(self, link):
+        try:
+            return requests.head(link, headers={"Accept": "text/html"}, timeout=1).ok
+        except:
+            return False
 
+    def _test_http_fragment(self, link, fragment):
+        if link in self.soup_mapping:
+            soup = self.soup_mapping[link]
+        else:
+            try:
+                response = requests.get(link, headers={"Accept": "text/html"}, timeout=1)
+                if not response.ok:
+                    return False
+                else:
+                    soup = BeautifulSoup(response.content, "html.parser")
+                    self.soup_mapping[link] = soup
+            except:
+                return False
+        return anchor_in_soup(soup, fragment)
+
+    def _test_file_fragment(self, fname, fragment):
+        if fname in self.soup_mapping:
+            soup = self.soup_mapping[fname]
+        else:
+            if not os.path.exists(fname):
+                return False
+
+            with open(fname) as fdata:
+                soup = BeautifulSoup(fdata, "html.parser")
+                self.soup_mapping[fname] = soup
+
+        return anchor_in_soup(soup, fragment)
+
+    def get_stats(self):
+        return (self.link_cnt, self.fail_cnt, len(self.seen_links))
 
 def main():
     "application entrypoint"
     pth = sys.argv[1] if len(sys.argv) > 1 else  os.path.curdir
     checker = LinkChecker()
     checker.test_dir(pth)
+    print("Statistics: seen:{} failed:{} unique:{}".format(*checker.get_stats()))
+    if checker.fail_cnt:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
