@@ -1,5 +1,5 @@
 [[source]]
-url = "https://pypi.org/html-checker"
+url = "https://pypi.org/simple"
 verify_ssl = true
 name = "html-checker"
 
@@ -12,3 +12,4 @@ requests = "*"
 
 [dev-packages]
 ipython = "*"
+pytest = "*"

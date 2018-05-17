@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0b3d7ebbc91cf1863c61207c8e46767c3a34138d4f3c3594aaff615ac09a0534"
+            "sha256": "b94bb972fb3b67776125847cf489ac78b1c6151711a77be5d3af5760a05c180f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -9,7 +9,7 @@
         },
         "sources": [
             {
-                "name": "pypi",
+                "name": "html-checker",
                 "url": "https://pypi.org/simple",
                 "verify_ssl": true
             }
@@ -28,7 +28,7 @@
             "hashes": [
                 "sha256:36ecea1fd7cc5c0c6e4a1ff075df26d50da647b75376626cc186e2212886dd3a"
             ],
-            "index": "pypi",
+            "index": "html-checker",
             "version": "==0.0.1"
         },
         "certifi": {
@@ -57,7 +57,7 @@
                 "sha256:6a1b267aa90cac58ac3a765d067950e7dbbf75b1da07e895d1f594193a40a38b",
                 "sha256:9c443e7324ba5b85070c4a818ade28bfabedf16ea10206da1132edaa6dda237e"
             ],
-            "index": "pypi",
+            "index": "html-checker",
             "version": "==2.18.4"
         },
         "urllib3": {
@@ -69,6 +69,13 @@
         }
     },
     "develop": {
+        "attrs": {
+            "hashes": [
+                "sha256:4b90b09eeeb9b88c35bc642cbac057e45a5fd85367b985bd2809c62b7b939265",
+                "sha256:e0d0eb91441a3b53dab4d9b743eafc1ac44476296a2053b6ca3af0b139faf87b"
+            ],
+            "version": "==18.1.0"
+        },
         "backcall": {
             "hashes": [
                 "sha256:38ecd85be2c1e78f77fd91700c76e14667dc21e2713b63876c0eb901196e01e4",
@@ -88,7 +95,7 @@
                 "sha256:a0c96853549b246991046f32d19db7140f5b1a644cc31f0dc1edc86713b7676f",
                 "sha256:eca537aa61592aca2fef4adea12af8e42f5c335004dfa80c78caf80e8b525e5c"
             ],
-            "index": "pypi",
+            "index": "html-checker",
             "version": "==6.4.0"
         },
         "ipython-genutils": {
@@ -104,6 +111,14 @@
                 "sha256:5861f6dc0c16e024cbb0044999f9cf8013b292c05f287df06d3d991a87a4eb89"
             ],
             "version": "==0.12.0"
+        },
+        "more-itertools": {
+            "hashes": [
+                "sha256:0dd8f72eeab0d2c3bd489025bb2f6a1b8342f9b198f6fc37b52d15cfa4531fea",
+                "sha256:11a625025954c20145b37ff6309cd54e39ca94f72f6bb9576d1195db6fa2442e",
+                "sha256:c9ce7eccdcb901a2c75d326ea134e0886abfbea5f93e91cc95de9507c0816c44"
+            ],
+            "version": "==4.1.0"
         },
         "parso": {
             "hashes": [
@@ -127,6 +142,14 @@
             ],
             "version": "==0.7.4"
         },
+        "pluggy": {
+            "hashes": [
+                "sha256:7f8ae7f5bdf75671a718d2daf0a64b7885f74510bcd98b1a0bb420eb9a9d0cff",
+                "sha256:d345c8fe681115900d6da8d048ba67c25df42973bda370783cd58826442dcd7c",
+                "sha256:e160a7fcf25762bb60efc7e171d4497ff1d8d2d75a3d0df7a21b76821ecbf5c5"
+            ],
+            "version": "==0.6.0"
+        },
         "prompt-toolkit": {
             "hashes": [
                 "sha256:1df952620eccb399c53ebb359cc7d9a8d3a9538cb34c5a1344bdbeb29fbcc381",
@@ -142,12 +165,27 @@
             ],
             "version": "==0.5.2"
         },
+        "py": {
+            "hashes": [
+                "sha256:29c9fab495d7528e80ba1e343b958684f4ace687327e6f789a94bf3d1915f881",
+                "sha256:983f77f3331356039fdd792e9220b7b8ee1aa6bd2b25f567a963ff1de5a64f6a"
+            ],
+            "version": "==1.5.3"
+        },
         "pygments": {
             "hashes": [
                 "sha256:78f3f434bcc5d6ee09020f92ba487f95ba50f1e3ef83ae96b9d5ffa1bab25c5d",
                 "sha256:dbae1046def0efb574852fab9e90209b23f556367b5a320c0bcb871c77c3e8cc"
             ],
             "version": "==2.2.0"
+        },
+        "pytest": {
+            "hashes": [
+                "sha256:54713b26c97538db6ff0703a12b19aeaeb60b5e599de542e7fca0ec83b9038e8",
+                "sha256:829230122facf05a5f81a6d4dfe6454a04978ea3746853b2b84567ecf8e5c526"
+            ],
+            "index": "html-checker",
+            "version": "==3.5.1"
         },
         "simplegeneric": {
             "hashes": [
