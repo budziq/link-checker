@@ -8,6 +8,19 @@ import sys
 from urllib.parse import urlsplit, urldefrag, urljoin
 import requests
 from bs4 import BeautifulSoup
+import click
+
+def info(msg):
+    """Show green info message"""
+    click.echo(click.style(msg, bold=True, fg="green"))
+
+def warn(msg):
+    """Show yellow warning message"""
+    click.echo(click.style(msg, bold=True, fg="yellow"))
+
+def error(msg):
+    """Show red error message"""
+    click.echo(click.style(msg, bold=True, fg="red"))
 
 def html_files_for_dir(pth):
     """gets a list of html files in directory"""
@@ -60,6 +73,7 @@ class LinkChecker:
         self.seen_links = {}
         self.link_cnt = 0
         self.fail_cnt = 0
+        self.fail_map = {}
 
     def test_link(self, link):
         """Check single link. Either local or remote"""
@@ -92,7 +106,7 @@ class LinkChecker:
 
     def test_file(self, fname):
         """Find all links in a single HTML file and test test if these are reachable"""
-        print("\nTesting: {}\n=================".format(fname))
+        info("Testing: {}".format(fname))
 
         if fname in self.soup_mapping:
             soup = self.soup_mapping[fname]
@@ -101,11 +115,20 @@ class LinkChecker:
                 soup = BeautifulSoup(fdata, "html.parser")
                 self.soup_mapping[fname] = soup
 
-        for lnk in links_in_soup(soup, fname):
-            self.link_cnt += 1
-            if not self.test_link(lnk):
-                self.fail_cnt += 1
-                print("'{}' Broken!".format(lnk))
+        fails = []
+        with click.progressbar(links_in_soup(soup, fname),
+                               fill_char=click.style(u'█', fg='yellow')
+                               ) as progress:
+            for lnk in progress:
+                self.link_cnt += 1
+                if not self.test_link(lnk):
+                    self.fail_cnt += 1
+                    fails.append(lnk)
+
+        if fails:
+            for lnk in fails:
+                error("'{}' Broken!".format(lnk))
+            self.fail_map[fname] = fails
 
     def test_dir(self, pth):
         """Find all HTML files in directory and perform tests on them"""
@@ -146,17 +169,24 @@ class LinkChecker:
         """return tuple with post test statistics"""
         return (self.link_cnt, self.fail_cnt, len(self.seen_links))
 
-def main():
-    """application entrypoint"""
-    pth = sys.argv[1] if len(sys.argv) > 1 else  os.path.curdir
+
+@click.command()
+@click.argument("PATH", default=os.path.curdir)
+def check(path):
+    """Test a directory of HTML files for broken links"""
     checker = LinkChecker()
-    checker.test_dir(pth)
-    print("Statistics: seen:{} failed:{} unique:{}".format(*checker.get_stats()))
+    checker.test_dir(path)
+    info("\n\nSummary: seen:{} failed:{} unique:{}".format(*checker.get_stats()))
     if checker.fail_cnt:
+        for (fname, fails) in checker.fail_map.items():
+            warn("* '{}'".format(fname))
+
+            for lnk in fails:
+                error("\t{}".format(lnk))
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    check()
 
 
 def test_rebase_link():
