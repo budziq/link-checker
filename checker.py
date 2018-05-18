@@ -5,13 +5,12 @@ Simple script to check directory full of html files for broken links
 
 import os
 import sys
-import itertools
 from urllib.parse import urlsplit, urldefrag, urljoin
 import requests
 from bs4 import BeautifulSoup
 
 def html_files_for_dir(pth):
-    "gets a list of html files in directory"
+    """gets a list of html files in directory"""
     for root, _dirs, files in os.walk(pth):
         for fname in files:
             fpath = os.path.join(root, fname)
@@ -20,6 +19,7 @@ def html_files_for_dir(pth):
                 yield fpath
 
 def rebase_link(lnk, baseurl, referrer_path):
+    """Change link base using <base href=""> path"""
     parsed = urlsplit(lnk)
     if parsed.scheme:
         return urljoin(baseurl, lnk)
@@ -28,6 +28,7 @@ def rebase_link(lnk, baseurl, referrer_path):
 
 
 def links_in_soup(soup, referrer):
+    """Find links to all files referenced by the HTML data."""
     baseurl = ""
     base = soup.find("base")
     if base and "href" in base.attrs:
@@ -39,9 +40,21 @@ def links_in_soup(soup, referrer):
 
 
 def anchor_in_soup(soup, anchor_name):
+    """Find if a given anchor id is present in a HTML data"""
     return bool(soup.find("", {"id" : anchor_name})) or bool(soup.find("", {"name" : anchor_name}))
 
+def test_http_head(link):
+    """Check if given remote resource is currently reachable via HTTP HEAD"""
+    try:
+        return requests.head(link, headers={"Accept": "text/html"}, timeout=1).ok
+    except:
+        # we explictly want to catch all exceptions
+        return False
+
 class LinkChecker:
+    """Class performing link checking. Basically it is a cache
+    retaining known link state and already parsed HTML data."""
+
     def __init__(self):
         self.soup_mapping = {}
         self.seen_links = {}
@@ -49,6 +62,7 @@ class LinkChecker:
         self.fail_cnt = 0
 
     def test_link(self, link):
+        """Check single link. Either local or remote"""
         base_link, fragment = urldefrag(link)
         if link in self.seen_links:
             return self.seen_links[link]
@@ -64,7 +78,7 @@ class LinkChecker:
                 # test with HTTP GET and read to soup
                 ret = self._test_http_fragment(base_link, fragment)
             else:
-                ret = self._test_http_head(link)
+                ret = test_http_head(link)
         else:
             if fragment:
                 # read file to soup
@@ -77,6 +91,7 @@ class LinkChecker:
         return ret
 
     def test_file(self, fname):
+        """Find all links in a single HTML file and test test if these are reachable"""
         print("\nTesting: {}\n=================".format(fname))
 
         if fname in self.soup_mapping:
@@ -93,14 +108,10 @@ class LinkChecker:
                 print("'{}' Broken!".format(lnk))
 
     def test_dir(self, pth):
+        """Find all HTML files in directory and perform tests on them"""
         for fname in html_files_for_dir(pth):
             self.test_file(fname)
 
-    def _test_http_head(self, link):
-        try:
-            return requests.head(link, headers={"Accept": "text/html"}, timeout=1).ok
-        except:
-            return False
 
     def _test_http_fragment(self, link, fragment):
         if link in self.soup_mapping:
@@ -114,6 +125,7 @@ class LinkChecker:
                     soup = BeautifulSoup(response.content, "html.parser")
                     self.soup_mapping[link] = soup
             except:
+                # we explictly want to catch all exceptions
                 return False
         return anchor_in_soup(soup, fragment)
 
@@ -131,10 +143,11 @@ class LinkChecker:
         return anchor_in_soup(soup, fragment)
 
     def get_stats(self):
+        """return tuple with post test statistics"""
         return (self.link_cnt, self.fail_cnt, len(self.seen_links))
 
 def main():
-    "application entrypoint"
+    """application entrypoint"""
     pth = sys.argv[1] if len(sys.argv) > 1 else  os.path.curdir
     checker = LinkChecker()
     checker.test_dir(pth)
@@ -147,7 +160,7 @@ if __name__ == "__main__":
 
 
 def test_rebase_link():
-    "tests for rebase_link function"
+    """tests for rebase_link function"""
     urls = [
         '_FontAwesome/css/font-awesome.css',
         'about.html',
