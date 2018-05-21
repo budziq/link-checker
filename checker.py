@@ -13,17 +13,21 @@ from requests.packages.urllib3 import Retry
 from bs4 import BeautifulSoup
 import click
 
+
 def info(msg):
     """Show green info message"""
     click.echo(click.style(msg, bold=True, fg="green"))
+
 
 def warn(msg):
     """Show yellow warning message"""
     click.echo(click.style(msg, bold=True, fg="yellow"))
 
+
 def error(msg):
     """Show red error message"""
     click.echo(click.style(msg, bold=True, fg="red"), err=True)
+
 
 def html_files_for_dir(pth):
     """gets a list of html files in directory"""
@@ -33,6 +37,7 @@ def html_files_for_dir(pth):
             fext = os.path.splitext(fpath)[1].lower()
             if fext == ".html" or fext == ".htm":
                 yield fpath
+
 
 def retry_session(
         retries=3,
@@ -54,6 +59,7 @@ def retry_session(
     session.mount('https://', adapter)
     return session
 
+
 def rebase_link(lnk, baseurl, referrer_path):
     """Change link base using <base href=""> path"""
     parsed = urlsplit(lnk)
@@ -70,14 +76,15 @@ def links_in_soup(soup, referrer):
     if base and "href" in base.attrs:
         baseurl = base.attrs["href"]
 
-    ret = [ln.attrs["href"] for ln in soup.findAll(["a", "link"]) if "href" in  ln.attrs]
+    ret = [ln.attrs["href"] for ln in soup.findAll(["a", "link"]) if "href" in ln.attrs]
     ret += [ln.attrs["src"] for ln in soup.findAll(["img", "script"]) if "src" in  ln.attrs]
     return {rebase_link(lnk, baseurl, referrer) for lnk in ret}
 
 
 def anchor_in_soup(soup, anchor_name):
     """Find if a given anchor id is present in a HTML data"""
-    return bool(soup.find("", {"id" : anchor_name})) or bool(soup.find("", {"name" : anchor_name}))
+    return bool(soup.find("", {"id" : anchor_name})) or bool(soup.find("", {"name": anchor_name}))
+
 
 def test_http_head(link):
     """Check if given remote resource is currently reachable via HTTP HEAD"""
@@ -89,15 +96,18 @@ def test_http_head(link):
         # we explictly want to catch all exceptions
         return False
 
+
 class Counter():
     """Simple item counter for progressbar"""
     def __init__(self, size):
         self.counter = 0
         self.size = size
+
     def __call__(self, item):
         if item is not None:
             self.counter += 1
             return "Item {}/{}".format(self.counter, self.size)
+
 
 class LinkChecker:
     """Class performing link checking. Basically it is a cache
@@ -143,7 +153,6 @@ class LinkChecker:
         self.seen_links[link] = ret
         return ret
 
-
     def test_link(self, link, ctx):
         """Wrapper to count fails"""
         external = urlsplit(link)[0]
@@ -158,8 +167,6 @@ class LinkChecker:
         if not self._test_link(link, external):
             self.fail_cnt += 1
             self.fail_map.setdefault(ctx, []).append(link)
-
-
 
     def test_file(self, fname):
         """Find all links in a single HTML file and test test if these are reachable"""
@@ -183,7 +190,6 @@ class LinkChecker:
         for fname in html_files_for_dir(pth):
             self.test_file(fname)
 
-
     def test_items(self, items):
         """Find all HTML files in directory and perform tests on them"""
         for item in items:
@@ -200,7 +206,6 @@ class LinkChecker:
                 else:
                     error("'{}' is not dir, file nor an url!".format(item))
                     sys.exit(2)
-
 
     def _test_http_fragment(self, link, fragment):
         if link in self.soup_mapping:
@@ -259,6 +264,7 @@ def check(items, local, external, ignore):
             for lnk in fails:
                 error("\t{}".format(lnk))
         sys.exit(1)
+
 
 if __name__ == "__main__":
     check()
