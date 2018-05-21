@@ -102,14 +102,16 @@ class LinkChecker:
     """Class performing link checking. Basically it is a cache
     retaining known link state and already parsed HTML data."""
 
-    def __init__(self):
+    def __init__(self, local, external):
         self.soup_mapping = {}
         self.seen_links = {}
         self.link_cnt = 0
         self.fail_cnt = 0
         self.fail_map = {}
+        self.test_local = local
+        self.test_external = external
 
-    def _test_link(self, link):
+    def _test_link(self, link, external):
         """Check single link. Either local or remote"""
         base_link, fragment = urldefrag(link)
         if link in self.seen_links:
@@ -118,18 +120,16 @@ class LinkChecker:
         if base_link in self.seen_links and not self.seen_links[base_link]:
             return False
 
-        scheme = urlsplit(link)[0]
         ret = False
-
-        if scheme:
+        if external:
             if fragment:
-                # test with HTTP GET and read to soup
+                # test with HTTP GET and read to soup to check for fragment anchor
                 ret = self._test_http_fragment(base_link, fragment)
             else:
                 ret = test_http_head(link)
         else:
             if fragment:
-                # read file to soup
+                # read file to soup to check for fragment anchor
                 ret = self._test_file_fragment(base_link, fragment)
             else:
                 # just stat file
@@ -141,8 +141,14 @@ class LinkChecker:
 
     def test_link(self, link, ctx):
         """Wrapper to count fails"""
+        external = urlsplit(link)[0]
+        if external and not self.test_external:
+            return True
+        if not external and not self.test_local:
+            return True
+
         self.link_cnt += 1
-        if not self._test_link(link):
+        if not self._test_link(link, external):
             self.fail_cnt += 1
             self.fail_map.setdefault(ctx, []).append(link)
 
@@ -181,11 +187,12 @@ class LinkChecker:
             else:
                 scheme = urlsplit(item)[0]
                 if scheme:
+                    # external link
                     base_link = urldefrag(item)[0]
                     self.test_link(item, base_link)
                 else:
                     error("'{}' is not dir, file nor an url!".format(item))
-                    sys.exit(1)
+                    sys.exit(2)
 
 
     def _test_http_fragment(self, link, fragment):
@@ -223,10 +230,18 @@ class LinkChecker:
 
 
 @click.command()
+@click.option("--local/--no-local", default=True,
+              help='Test local links')
+@click.option("--external/--no-external", default=True,
+              help='Test external links')
 @click.argument("ITEMS", nargs=-1)
-def check(items):
+def check(items, local, external):
     """Test a directory of HTML files for broken links"""
-    checker = LinkChecker()
+    if not local and not external:
+        error("Using both '--no-local' and '--no-external' would yield no results!")
+        sys.exit(2)
+
+    checker = LinkChecker(local, external)
     checker.test_items(items)
     info("\n\nSummary: seen:{} failed:{} unique:{}".format(*checker.get_stats()))
     if checker.fail_cnt:
