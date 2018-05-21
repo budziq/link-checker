@@ -109,7 +109,7 @@ class LinkChecker:
         self.fail_cnt = 0
         self.fail_map = {}
 
-    def test_link(self, link):
+    def _test_link(self, link):
         """Check single link. Either local or remote"""
         base_link, fragment = urldefrag(link)
         if link in self.seen_links:
@@ -138,6 +138,16 @@ class LinkChecker:
         self.seen_links[link] = ret
         return ret
 
+
+    def test_link(self, link, ctx):
+        """Wrapper to count fails"""
+        self.link_cnt += 1
+        if not self._test_link(link):
+            self.fail_cnt += 1
+            self.fail_map.setdefault(ctx, []).append(link)
+
+
+
     def test_file(self, fname):
         """Find all links in a single HTML file and test test if these are reachable"""
         info("Testing: {}".format(fname))
@@ -149,25 +159,33 @@ class LinkChecker:
                 soup = BeautifulSoup(fdata, "html.parser")
                 self.soup_mapping[fname] = soup
 
-        fails = []
         links = links_in_soup(soup, fname)
         with click.progressbar(links, fill_char=click.style(u'█', fg='yellow'),
                                item_show_func=Counter(len(links))) as progress:
             for lnk in progress:
-                self.link_cnt += 1
-                if not self.test_link(lnk):
-                    self.fail_cnt += 1
-                    fails.append(lnk)
-
-        if fails:
-            for lnk in fails:
-                error("'{}' Broken!".format(lnk))
-            self.fail_map[fname] = fails
+                self.test_link(lnk, fname)
 
     def test_dir(self, pth):
         """Find all HTML files in directory and perform tests on them"""
         for fname in html_files_for_dir(pth):
             self.test_file(fname)
+
+
+    def test_items(self, items):
+        """Find all HTML files in directory and perform tests on them"""
+        for item in items:
+            if os.path.isdir(item):
+                self.test_dir(item)
+            elif os.path.isfile(item):
+                self.test_file(item)
+            else:
+                scheme = urlsplit(item)[0]
+                if scheme:
+                    base_link = urldefrag(item)[0]
+                    self.test_link(item, base_link)
+                else:
+                    error("'{}' is not dir, file nor an url!".format(item))
+                    sys.exit(1)
 
 
     def _test_http_fragment(self, link, fragment):
@@ -205,11 +223,11 @@ class LinkChecker:
 
 
 @click.command()
-@click.argument("PATH", default=os.path.curdir)
-def check(path):
+@click.argument("ITEMS", nargs=-1)
+def check(items):
     """Test a directory of HTML files for broken links"""
     checker = LinkChecker()
-    checker.test_dir(path)
+    checker.test_items(items)
     info("\n\nSummary: seen:{} failed:{} unique:{}".format(*checker.get_stats()))
     if checker.fail_cnt:
         for (fname, fails) in checker.fail_map.items():
