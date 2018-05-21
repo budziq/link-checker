@@ -5,6 +5,7 @@ Simple script to check directory full of html files for broken links
 
 import os
 import sys
+import re
 from urllib.parse import urlsplit, urldefrag, urljoin
 import requests
 from requests.adapters import HTTPAdapter
@@ -102,7 +103,7 @@ class LinkChecker:
     """Class performing link checking. Basically it is a cache
     retaining known link state and already parsed HTML data."""
 
-    def __init__(self, local, external):
+    def __init__(self, local, external, ignore):
         self.soup_mapping = {}
         self.seen_links = {}
         self.link_cnt = 0
@@ -110,6 +111,10 @@ class LinkChecker:
         self.fail_map = {}
         self.test_local = local
         self.test_external = external
+        if ignore:
+            self.ignores = [re.compile(i) for i in ignore.split(";")]
+        else:
+            self.ignores = []
 
     def _test_link(self, link, external):
         """Check single link. Either local or remote"""
@@ -145,6 +150,8 @@ class LinkChecker:
         if external and not self.test_external:
             return True
         if not external and not self.test_local:
+            return True
+        if any(rex.match(link) for rex in self.ignores):
             return True
 
         self.link_cnt += 1
@@ -234,14 +241,15 @@ class LinkChecker:
               help='Test local links')
 @click.option("--external/--no-external", default=True,
               help='Test external links')
+@click.option("--ignore", help="List of ';' separated URL regexps to ignore")
 @click.argument("ITEMS", nargs=-1)
-def check(items, local, external):
+def check(items, local, external, ignore):
     """Test a directory of HTML files for broken links"""
     if not local and not external:
         error("Using both '--no-local' and '--no-external' would yield no results!")
         sys.exit(2)
 
-    checker = LinkChecker(local, external)
+    checker = LinkChecker(local, external, ignore)
     checker.test_items(items)
     info("\n\nSummary: seen:{} failed:{} unique:{}".format(*checker.get_stats()))
     if checker.fail_cnt:
