@@ -59,7 +59,9 @@ def anchor_in_soup(soup, anchor_name):
 def test_http_head(link):
     """Check if given remote resource is currently reachable via HTTP HEAD"""
     try:
-        return requests.head(link, headers={"Accept": "text/html"}, timeout=1).ok
+        return requests.head(link,
+                             headers={"Accept": "text/html"},
+                             allow_redirects=True, timeout=1).ok
     except:
         # we explictly want to catch all exceptions
         return False
