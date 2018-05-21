@@ -66,6 +66,16 @@ def test_http_head(link):
         # we explictly want to catch all exceptions
         return False
 
+class Counter():
+    """Simple item counter for progressbar"""
+    def __init__(self, size):
+        self.counter = 0
+        self.size = size
+    def __call__(self, item):
+        if item is not None:
+            self.counter += 1
+            return "Item {}/{}".format(self.counter, self.size)
+
 class LinkChecker:
     """Class performing link checking. Basically it is a cache
     retaining known link state and already parsed HTML data."""
@@ -118,9 +128,9 @@ class LinkChecker:
                 self.soup_mapping[fname] = soup
 
         fails = []
-        with click.progressbar(links_in_soup(soup, fname),
-                               fill_char=click.style(u'█', fg='yellow')
-                               ) as progress:
+        links = links_in_soup(soup, fname)
+        with click.progressbar(links, fill_char=click.style(u'█', fg='yellow'),
+                               item_show_func=Counter(len(links))) as progress:
             for lnk in progress:
                 self.link_cnt += 1
                 if not self.test_link(lnk):
