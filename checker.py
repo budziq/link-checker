@@ -7,6 +7,8 @@ import os
 import sys
 from urllib.parse import urlsplit, urldefrag, urljoin
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3 import Retry
 from bs4 import BeautifulSoup
 import click
 
@@ -20,7 +22,7 @@ def warn(msg):
 
 def error(msg):
     """Show red error message"""
-    click.echo(click.style(msg, bold=True, fg="red"))
+    click.echo(click.style(msg, bold=True, fg="red"), err=True)
 
 def html_files_for_dir(pth):
     """gets a list of html files in directory"""
@@ -30,6 +32,26 @@ def html_files_for_dir(pth):
             fext = os.path.splitext(fpath)[1].lower()
             if fext == ".html" or fext == ".htm":
                 yield fpath
+
+def retry_session(
+        retries=3,
+        backoff_factor=1.3,
+        status_forcelist=(500, 502, 504),
+        session=None):
+    """create session with retry capabilities"""
+
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
 def rebase_link(lnk, baseurl, referrer_path):
     """Change link base using <base href=""> path"""
@@ -59,9 +81,9 @@ def anchor_in_soup(soup, anchor_name):
 def test_http_head(link):
     """Check if given remote resource is currently reachable via HTTP HEAD"""
     try:
-        return requests.head(link,
-                             headers={"Accept": "text/html"},
-                             allow_redirects=True, timeout=1).ok
+        return retry_session().head(link,
+                                    headers={"Accept": "text/html"},
+                                    allow_redirects=True, timeout=5).ok
     except:
         # we explictly want to catch all exceptions
         return False
@@ -153,7 +175,7 @@ class LinkChecker:
             soup = self.soup_mapping[link]
         else:
             try:
-                response = requests.get(link, headers={"Accept": "text/html"}, timeout=1)
+                response = retry_session().get(link, headers={"Accept": "text/html"}, timeout=5)
                 if not response.ok:
                     return False
                 else:
