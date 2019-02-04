@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Simple script to check directory full of html files for broken links
 """
@@ -13,6 +14,7 @@ from requests.packages.urllib3 import Retry
 from bs4 import BeautifulSoup
 import click
 
+__version__ = "0.1.2"
 
 def info(msg):
     """Show green info message"""
@@ -241,15 +243,22 @@ class LinkChecker:
         return (self.link_cnt, self.fail_cnt, len(self.seen_links))
 
 
-@click.command()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option("-v", "--version", flag_value=True,
+               help='Show version')
 @click.option("--local/--no-local", default=True,
               help='Test local links')
 @click.option("--external/--no-external", default=True,
               help='Test external links')
 @click.option("--ignore", help="List of ';' separated URL regexps to ignore")
 @click.argument("ITEMS", nargs=-1)
-def check(items, local, external, ignore):
+def check(items, local, external, ignore, version):
     """Test a directory of HTML files for broken links"""
+    if version:
+        click.echo(__version__)
+        sys.exit(0)
+
     if not local and not external:
         error("Using both '--no-local' and '--no-external' would yield no results!")
         sys.exit(2)
