@@ -232,9 +232,20 @@ class LinkChecker:
             if not os.path.exists(fname):
                 return False
 
-            with open(fname) as fdata:
-                soup = BeautifulSoup(fdata, "html.parser")
-                self.soup_mapping[fname] = soup
+            if os.path.isfile(fname):
+                filename = fname
+            elif os.path.isdir(fname):
+                filename = False
+                while not filename:
+                    for possiblefile in ['index.htm', 'index.html']:
+                        if os.path.isfile(os.path.join(fname, possiblefile)):
+                            filename = os.path.join(fname, possiblefile)
+            if filename:
+                with open(filename) as fdata:
+                    soup = BeautifulSoup(fdata, "html.parser")
+                    self.soup_mapping[fname] = soup
+            else:
+                return False
 
         return anchor_in_soup(soup, fragment)
 
